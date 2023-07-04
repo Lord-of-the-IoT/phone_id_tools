@@ -27,7 +27,39 @@ data = {'Abkhazia': ['7',
                            'verizon Wireless': ['277', '312']}
                           ]
         }
- 
+
+class LuhnAlgorithm:
+    def gen(self, digits):
+        if digits.isnumeric():
+            digits=[digit for digit in digits.strip()]
+            for i in range(len(digits)-2, 0, -2):
+                odd = int(digits[i])*2
+                
+                if odd>9:
+                    odd = (odd % 10) + (odd // 10)
+                digits[i]=str(odd)
+            print(f'sum is {sum([int(digit) for digit in digits])}')
+            luhn_value= sum([int(digit) for digit in digits])%10
+            print(f'luhn value is {luhn_value}')
+            luhn_checksum = 10-luhn_value
+            return str(luhn_checksum)
+        
+    def check(self, digits):
+        if digits.isnumeric():
+            digits=[digit for digit in digits.strip()]
+            for i in range(len(digits)-2, 0, -2):
+                odd = int(digits[i])*2
+                
+                if odd>9:
+                    odd = sum([int(digit) for digit in str(odd)])
+                digits[i]=str(odd)
+            print(f'sum is {sum([int(digit) for digit in digits])}')
+            luhn_value=sum([int(digit) for digit in digits])%10
+            print('luhn value = '+str(luhn_value))
+            return luhn_value==0
+                
+                
+            
 class ICCID:
     """
     Intergrated Circuit Card IDentifier  (18-22 digits)
@@ -47,35 +79,44 @@ class ICCID:
     """
     def __init__(self, cli):
         self.cli= cli
+        
     def gen(self):
         mii = '89' #major industry identifier
         country = '' #country from the data variable including country code and individual identifier number
         iain = '' #individual account identification number
         lcn = '' #luhn check number
     
-        self.cli.banner(f'\n\n        country: {country}\n        network operator:')
+        self.cli.banner(f'\n\n         country: {country}\n         network operator:')
         print('\n\n        select country (some are not counties)')
         choice = self.cli.select(data.keys(), input_string='choose the country code')
         country = data[list(data.keys())[choice]]
         country.append(list(data.keys())[choice])
 
-        self.cli.banner(f'\n\n        country: {country[2]}\n        network operator:')
+        self.cli.banner(f'\n\n         country: {country[2]}\n         network operator:')
         print('\n\n        select network operator')
         choice = self.cli.select(country[1].keys(), input_string='choose the network operator')
         operator = list(country[1].keys())[choice]
 
-        self.cli.banner(f'\n\n        code so far: {mii}{country[1][operator][1]}{country[1][operator][0]}\n        country: {country[2]}\n        network operator: {operator}')
+        self.cli.banner(f'\n\n        ICCID so far: {mii}{country[1][operator][1]}{country[1][operator][0]}\n         country: {country[2]}\n         network operator: {operator}')
         print('\n\n        select length of Individual Account Idenification Number:')
         choice = self.cli.select([11, 12, 13, 14], input_string='choose the length')+11
         iain = ''.join([str(random.randint(0, 9)) for _ in range(choice)])
+        code = mii+country[1][operator][1]+country[1][operator][0]+iain
+        self.cli.banner(f'\n\n        ICCID so far: {code}\n        country: {country[2]}\n        network operator: {operator}')
         
-        self.cli.banner(f'\n\n        code so far: {mii}{country[1][operator][1]}{country[1][operator][0]}{iain}\n        country: {country[2]}\n        network operator: {operator}')
-        
+        lcn = self.cli.luhn.gen(code)
+        code+=lcn
+        self.cli.banner(f'\n\n        ICCID Calculated!\n        ICCID: {code}\n         country: {country[2]}\n         network operator: {operator}')
+        if self.cli.luhn.check(code):
+            print('        valid luhn checksum!')
+        else:
+            self.cli.error('invalid luhn checksum!')
         input()
 
     
 class CLI:
     def __init__(self):
+        self.luhn = LuhnAlgorithm()
         self.iccid = ICCID(self)
             
     def error(self, reason):
@@ -141,5 +182,5 @@ class CLI:
             self.banner(banner_string)
 
 if __name__ == '__main__':
-	cli = CLI()
-	cli()
+    cli = CLI()
+    cli()
